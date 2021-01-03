@@ -1,32 +1,9 @@
-// import { promises as fs } from "fs";
-// import path from "path";
-// //   "type": "module", to package.json
-// const contactsPath = path.normalize(
-//   "D:/GOIT/Node/Homeworks/Node-01-node-basics/data/contacts.json"
-// );
-
-// // TODO: задокументировать каждую функцию
-// async function listContacts() {
-//   let listOfContacts = await fs.readFile(
-//     contactsPath,
-//     "utf-8",
-//     function (error, data) {
-//       if (error) {
-//         console.log(error);
-//       }
-//     }
-//   );
-//   return listOfContacts;
-// }
-
 const fs = require("fs");
 const path = require("path");
 const { getMaxListeners } = require("process");
-const contactsPath = path.normalize(
-  "D:/GOIT/Node/Homeworks/Node-01-node-basics/data/contacts.json"
-);
 
-// TODO: задокументировать каждую функцию
+const contactsPath = path.join(__dirname, "/db/contacts.json");
+
 async function listContacts() {
   try {
     let listOfContacts = await fs.promises.readFile(contactsPath, "utf-8");
@@ -35,19 +12,6 @@ async function listContacts() {
     console.log(error);
   }
 }
-
-// function listContacts() {
-//   return new Promise((resolve, rejected) => {
-//     fs.readFile(contactsPath, "utf-8", (error, listOfContacts) => {
-//       if (error) {
-//         rejected(error);
-//       } else {
-//         // console.log(listOfContacts);
-//         resolve(listOfContacts);
-//       }
-//     });
-//   });
-// }
 
 async function getContactById(contactId) {
   try {

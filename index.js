@@ -1,4 +1,4 @@
-const importFunctions = require("./db/contacts");
+const importFunctions = require("./contacts");
 
 const argv = require("yargs").argv;
 
