@@ -1,0 +1,26 @@
+{
+  "name": "node-01-node-basics",
+  "version": "1.0.0",
+  "description": "homework_1",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IgorSapko/Node.git"
+  },
+  "author": "IgorSapko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/IgorSapko/Node/issues"
+  },
+  "homepage": "https://github.com/IgorSapko/Node#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  },
+  "dependencies": {
+    "yargs": "^16.2.0"
+  }
+}
