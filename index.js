@@ -1,30 +1,34 @@
-const importFunctions = require("./contacts");
+const importFunctions = require("./controllers/contacts");
+const mongoose = require("mongoose");
 
-const argv = require("yargs").argv;
+const express = require("express");
+const cors = require("cors");
+const app = express();
+const userRouter = require("./routes/user.routes");
+const MONGO_PASS = "Mhr23SIsPIF5WSCM";
+const MONGO_URL = `mongodb+srv://Admin:${MONGO_PASS}@cluster0.elolo.mongodb.net/db-contacts`;
 
-function invokeAction({ action, id, name, email, phone }) {
-  switch (action) {
-    case "list":
-      (async function () {
-        console.log(await importFunctions.listContacts());
-      })();
-      break;
+var morgan = require("morgan");
+const { startSession } = require("./models/contacts");
+const PORT = 3000;
+app.use(cors({ orogin: `localhost:${PORT}` }));
+app.use(morgan("combined"));
+app.use(express.json());
+app.use("/api/contacts", userRouter);
+// startConnectionToDBAndListeningOfSrver();
 
-    case "get":
-      importFunctions.getContactById(id);
-      break;
-
-    case "add":
-      importFunctions.addContact(name, email, phone);
-      break;
-
-    case "remove":
-      importFunctions.removeContact(id);
-      break;
-
-    default:
-      console.warn("\x1B[31m Unknown action type!");
+(async function startConnectionToDBAndListeningOfSrver() {
+  try {
+    await mongoose.connect(MONGO_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Database connection successful");
+    app.listen(PORT, () => {
+      console.log("Server is listening on: ", PORT);
+    });
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
   }
-}
-
-invokeAction(argv);
+})()
