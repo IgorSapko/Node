@@ -28,7 +28,6 @@ app.use("/api/contacts", userRouter);
       console.log("Server is listening on: ", PORT);
     });
   } catch (error) {
-    console.log(error);
     process.exit(1);
   }
-})()
+})();
