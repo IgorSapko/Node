@@ -1,5 +1,6 @@
 const { getMaxListeners, connected, exit } = require("process");
 const Contact = require("../models/contacts");
+const Joi = require("joi");
 
 const {
   Types: { ObjectId },
@@ -20,15 +21,13 @@ async function getContactById(req, res) {
     const {
       params: { contactId },
     } = req;
-    ObjectId.isValid(contactId)
-      ? ((foundContact = await Contact.findById(contactId)),
-        foundContact
-          ? res.status(200).send(foundContact)
-          : res.status(404).send({ message: "Contact not found" }))
-      : res.status(400).send({ message: "ID is not valid" });
+    foundContact = await Contact.findById(contactId);
+    foundContact
+      ? res.status(200).send(foundContact)
+      : res.status(404).send({ message: "Contact not found" });
   } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
+    console.log(error.message);
+    res.status(500).send(error.message);
   }
 }
 
@@ -37,30 +36,23 @@ async function removeContact(req, res) {
     const {
       params: { contactId },
     } = req;
-    ObjectId.isValid(contactId)
-      ? ((deletedContact = await Contact.findByIdAndDelete(contactId)),
-        deletedContact
-          ? res.status(200).send({ message: "Contact deleted" })
-          : res.status(404).send({ message: "Contact not found" }))
-      : res.status(400).send({ message: "ID is not valid" });
+    deletedContact = await Contact.findByIdAndDelete(contactId);
+    deletedContact
+      ? res.status(200).send({ message: "Contact deleted" })
+      : res.status(404).send({ message: "Contact not found" });
   } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
+    console.log(error.message);
+    res.status(500).send(error.message);
   }
 }
 
 async function addContact(req, res) {
   try {
-    // errorReturn(err)
-    const { name, email, password, phone } = req.body;
-    name && email && password && phone
-      ? ((newContact = await Contact.create(req.body)),
-        res.status(201).send(newContact))
-      : res.status(400).send({ message: "missing required name field" });
-    //
+    newContact = await Contact.create(req.body);
+    res.status(201).send(newContact);
   } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
+    console.log(error.message);
+    res.status(500).send(error.message);
   }
 }
 
@@ -69,28 +61,61 @@ async function updateContact(req, res) {
     const {
       params: { contactId },
     } = req;
-    const { name, email, password, phone } = req.body;
-    ObjectId.isValid(contactId)
-      ? ((updatedContact = await Contact.findByIdAndUpdate(
-          contactId,
-          { $set: req.body },
-          {
-            new: true,
-          }
-        )),
-        updatedContact && (name || email || phone || password)
-          ? res.status(200).send(updatedContact)
-          : !updatedContact
-          ? res.status(404).send({ message: "Contact not found" })
-          : res.status(400).send({ message: "missing fields" }))
-      : res.status(400).send({ message: "ID is not valid" });
+    updatedContact = await Contact.findByIdAndUpdate(
+      contactId,
+      { $set: req.body },
+      {
+        new: true,
+      }
+    );
+    updatedContact
+      ? res.status(200).send(updatedContact)
+      : res.status(404).send({ message: "Contact not found" });
   } catch (error) {
     console.log(error);
   }
 }
 
-function errorReturn(err) {
-  return err;
+function validateId(req, res, next) {
+  const {
+    params: { contactId },
+  } = req;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send("Contact id is not valid");
+  }
+
+  next();
+}
+
+function validateUpdateContact(req, res, next) {
+  const validationRules = Joi.object({
+    name: Joi.string(),
+    email: Joi.string(),
+    password: Joi.string(),
+    phone: Joi.string(),
+  });
+  const validationResult = validationRules.validate(req.body);
+  if (validationResult.error) {
+    return res.status(400).send(validationResult.error);
+  }
+  next();
+}
+
+function validateAddContact(req, res, next) {
+  const validationRules = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().required(),
+    password: Joi.string().required(),
+    phone: Joi.string().required(),
+  });
+
+  const validationResult = validationRules.validate(req.body);
+  if (validationResult.error) {
+    res.status(400).send(validationResult.error);
+  }
+
+  next();
 }
 
 module.exports = {
@@ -99,4 +124,7 @@ module.exports = {
   removeContact,
   addContact,
   updateContact,
+  validateId,
+  validateUpdateContact,
+  validateAddContact,
 };
