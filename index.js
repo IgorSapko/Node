@@ -1,25 +1,26 @@
-const importFunctions = require("./controllers/contacts");
 const mongoose = require("mongoose");
-
 const express = require("express");
 const cors = require("cors");
-const app = express();
+var morgan = require("morgan");
+
+// const importFunctions = require("./controllers/contacts");
 const contactRouter = require("./routes/contact.routes");
+const { userRouterAuth, userRouter } = require("./routes/user.routes");
 
-require('dotenv').config();
+require("dotenv").config();
 
-const MONGO_PASS = process.env.MONGO_PASS
+const MONGO_PASS = process.env.MONGO_PASS;
 const PORT = process.env.PORT;
-
 const MONGO_URL = `mongodb+srv://Admin:${MONGO_PASS}@cluster0.elolo.mongodb.net/db-contacts`;
 
-var morgan = require("morgan");
 const { startSession } = require("./models/contacts");
-
+const app = express();
 app.use(cors({ orogin: `localhost:${PORT}` }));
 app.use(morgan("combined"));
 app.use(express.json());
 app.use("/api/contacts", contactRouter);
+app.use("/auth", userRouterAuth);
+app.use("/users", userRouter);
 
 (async function startConnectionToDBAndListeningOfSrver() {
   try {
@@ -35,4 +36,4 @@ app.use("/api/contacts", contactRouter);
     console.log(error);
     process.exit(1);
   }
-})()
+})();

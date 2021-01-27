@@ -8,7 +8,22 @@ const {
 
 async function listContacts(req, res) {
   try {
-    const listOfContacts = await Contact.find();
+    let page = req.query.page;
+    let limit = req.query.limit;
+    let sub = req.query.sub;
+
+    if (page && limit) {
+      let listOfContacts = await Contact.paginate({}, { page, limit });
+      res.status(200).send(listOfContacts.docs);
+      return;
+    }
+    if (sub) {
+      console.log('sub')
+      let listOfContacts = await Contact.find({ subscription: sub });
+     await res.status(200).send(listOfContacts);
+      return;
+    }
+    listOfContacts = await Contact.find();
     res.status(200).send(listOfContacts);
   } catch (error) {
     console.log(error);
@@ -81,7 +96,7 @@ function validateId(req, res, next) {
     params: { contactId },
   } = req;
 
-  if (!ObjectId.isValid(id)) {
+  if (!ObjectId.isValid(contactId)) {
     return res.status(400).send("Contact id is not valid");
   }
 

@@ -5,7 +5,11 @@ const importFunctions = require("../controllers/contacts");
 
 router.get("/", importFunctions.listContacts);
 
-router.get(`/:contactId`,importFunctions.validateId,  importFunctions.getContactById);
+router.get(
+  `/:contactId`,
+  importFunctions.validateId,
+  importFunctions.getContactById
+);
 
 router.post(
   "/",
