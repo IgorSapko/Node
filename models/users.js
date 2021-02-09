@@ -18,6 +18,8 @@ const UserSchema = new Schema({
     default: "free",
   },
   token: String,
+  avatarURL: String,
+
 });
 
 const User = mongoose.model("User", UserSchema);

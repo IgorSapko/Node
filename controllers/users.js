@@ -2,27 +2,120 @@ const User = require("../models/users");
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const path = require("path");
+const fs = require("fs");
+const AvatarGenerator = require("avatar-generator");
+// const multiavatar = require("@multiavatar/multiavatar");
+const imagemin = require("imagemin");
+const imageminJpegtran = require("imagemin-jpegtran");
+const imageminPngquant = require("imagemin-pngquant");
 
 const {
   Types: { ObjectId },
 } = require("mongoose");
 
+require("dotenv").config();
+const PORT = process.env.PORT;
+
 async function registerUser(req, res) {
   try {
-    const {
-      body: { password },
-    } = req;
+    const { email, password } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    newUser = await User.create({ ...req.body, password: hash });
+    // let svgCode = multiavatar(`${email}`);
+    // let avatarURL = `https://api.multiavatar.com/${email}`;
+    // newUser = await User.create({ ...req.body, password: hash, avatarURL });
+    const newUser = await User.create({
+      ...req.body,
+      password: hash,
+      avatarURL: "",
+    });
+    avatarCreate(email);
+    let avatarURL = `http://localhost:${PORT}/images/${email}.png`;
+    const newUserWithAvatarUrl = await User.findByIdAndUpdate(
+      { _id: newUser._id },
+      { $set: { avatarURL: avatarURL } },
+      { new: true }
+    );
+
     res.status(201).send({
       user: { email: newUser.email, subscription: newUser.subscription },
     });
   } catch (error) {
-    console.log(error.message);
-    if (error.keyValue.email) res.status(409).send("Email in use");
+    console.log(error);
+    if (error.keyValue !== undefined && error.keyValue.email) {
+      res.status(409).send("Email in use");
+      return;
+    }
     res.status(500).send(error.message);
   }
 }
+
+async function avatarCreate(email) {
+  const avatar = new AvatarGenerator({
+    imageExtension: ".png", // sprite file extension
+  });
+  email.length % 2 === 0 ? (variant = "male") : (variant = "female");
+  // const variant = "male"; // By default 'male' and 'female' supported
+  const image = await avatar.generate(email, variant);
+  // Now `image` contains sharp image pipeline http://sharp.pixelplumbing.com/en/stable/api-output/
+  // you can write it to file
+  const avatarAddressInTmpFolder = `${path.join(
+    __dirname,
+    `../tmp/${email}.png`
+  )}`;
+  await image.png().toFile(avatarAddressInTmpFolder);
+  fs.copyFileSync(
+    avatarAddressInTmpFolder,
+    `${path.join(__dirname, `../public/images/${email}.png`)}`
+  );
+  fs.unlink(avatarAddressInTmpFolder, (err) => {
+    if (err) {
+      throw err;
+    }
+  });
+}
+
+async function updateAvatar(req, res) {
+  try {
+      const { destination, filename } = req.file;
+  const { _id, email } = req.user;
+  console.log("req.file", req.file);
+  const avatarAddressInTmpFolder = destination + "/" + filename;
+  const files = await imagemin([avatarAddressInTmpFolder], {
+    destination: "public/images/",
+    plugins: [
+      imageminJpegtran(),
+      imageminPngquant({
+        quality: [0.6, 0.8],
+      }),
+    ],
+  });
+
+  fs.promises.unlink(avatarAddressInTmpFolder, (err) => {
+    if (err) {
+      throw err;
+    }
+  });
+  userCurrentAvatarAddress = `${path.join(
+    __dirname,
+    `../public/images/${email}.png`
+  )}`;
+  userNewAvatarAddress = `${path.join(
+    __dirname,
+    `../public/images/${req.file.filename}`
+  )}`;
+
+  fs.rename(userNewAvatarAddress, userCurrentAvatarAddress, (err) => {
+    if (err) throw err;
+  });
+
+  const avatarURL = `http://localhost:${PORT}/images/${email}.png`;
+
+  res.status(200).send(`"avatarURL":${avatarURL}`)
+} catch (error) {
+    res.status(401).send("Not authorized");
+}
+ }
 
 function validateDataOfUser(req, res, next) {
   const validationRules = Joi.object({
@@ -41,6 +134,8 @@ function validateDataOfUser(req, res, next) {
 async function login(req, res) {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
+  console.log("user", user);
+
   if (!user) {
     return res.status(401).send("Email or password is wrong");
   }
@@ -215,4 +310,6 @@ module.exports = {
   validateUpdateUser,
   validateId,
   getCurrentUserData,
+  updateAvatar,
+
 };
