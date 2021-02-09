@@ -1,91 +1,134 @@
-const { getMaxListeners, connected, exit } = require("process");
-const Contact = require("../models/contacts");
-const Joi = require("joi");
+const fs = require("fs");
+const path = require("path");
+const { getMaxListeners } = require("process");
 
-const {
-  Types: { ObjectId },
-} = require("mongoose");
+const contactsPath = path.join(__dirname, "../models/contacts.json");
 
 async function listContacts(req, res) {
   try {
-    let page = req.query.page;
-    let limit = req.query.limit;
-    let sub = req.query.sub;
-
-    if (page && limit) {
-      let listOfContacts = await Contact.paginate({}, { page, limit });
-      res.status(200).send(listOfContacts.docs);
-      return;
+    let listOfContacts = await fs.promises.readFile(contactsPath, "utf-8");
+    if (res) {
+      res.status(200).send(listOfContacts);
     }
-    if (sub) {
-      console.log('sub')
-      let listOfContacts = await Contact.find({ subscription: sub });
-     await res.status(200).send(listOfContacts);
-      return;
-    }
-    listOfContacts = await Contact.find();
-    res.status(200).send(listOfContacts);
+    return listOfContacts;
   } catch (error) {
     console.log(error);
-    res.status(500).send(error);
   }
 }
 
 async function getContactById(req, res) {
   try {
-    const {
-      params: { contactId },
-    } = req;
-    foundContact = await Contact.findById(contactId);
-    foundContact
-      ? res.status(200).send(foundContact)
-      : res.status(404).send({ message: "Contact not found" });
+    const id = parseInt(req.url.match(/\d+/));
+    const listOfContacts = await listContacts();
+    const foundContact = JSON.parse(listOfContacts).find(
+      (contact) => contact.id === id
+    );
+    if (!foundContact) {
+      res.status(404).send({ message: "Not found" });
+      return;
+    }
+    res.status(200).send(foundContact);
+    return foundContact;
   } catch (error) {
-    console.log(error.message);
-    res.status(500).send(error.message);
+    console.log(error);
   }
 }
 
 async function removeContact(req, res) {
   try {
-    const {
-      params: { contactId },
-    } = req;
-    deletedContact = await Contact.findByIdAndDelete(contactId);
+    const id = parseInt(req.url.match(/\d+/));
+    const listOfContacts = await listContacts();
+    let deletedContact = null;
+    newContactsList = JSON.parse(listOfContacts).filter((contact) => {
+      if (contact.id === id) {
+        deletedContact = contact;
+      }
+      return contact.id !== id;
+    });
+
     deletedContact
-      ? res.status(200).send({ message: "Contact deleted" })
-      : res.status(404).send({ message: "Contact not found" });
+      ? (fs.writeFile(
+          contactsPath,
+          JSON.stringify(newContactsList),
+          (error) => {
+            if (error) {
+              console.log(error);
+            }
+          }
+        ),
+        res.status(200).send({ message: "contact deleted" }))
+      : res.status(404).send({ message: "Not found" });
+    return deletedContact;
   } catch (error) {
-    console.log(error.message);
-    res.status(500).send(error.message);
+    console.log(error);
   }
 }
 
 async function addContact(req, res) {
   try {
-    newContact = await Contact.create(req.body);
-    res.status(201).send(newContact);
+    const { name, email, phone } = req.body;
+    const listOfContacts = await listContacts();
+    newContactsList = JSON.parse(listOfContacts);
+    if (name && email && phone) {
+      const newContact = { id: name + email + phone, name, email, phone };
+      newContactsList.push(newContact);
+      fs.writeFile(
+        contactsPath,
+        JSON.stringify(newContactsList),
+        res.status(201).send(newContact),
+        (error) => {
+          if (error) {
+            console.log(error);
+          }
+        }
+      );
+    } else {
+      res.status(400).send({ message: "missing required name field" });
+    }
+    return newContact;
   } catch (error) {
-    console.log(error.message);
-    res.status(500).send(error.message);
+    console.log(error);
   }
 }
 
 async function updateContact(req, res) {
   try {
-    const {
-      params: { contactId },
-    } = req;
-    updatedContact = await Contact.findByIdAndUpdate(
-      contactId,
-      { $set: req.body },
-      {
-        new: true,
+    const id = parseInt(req.url.match(/\d+/));
+    const { name, email, phone } = req.body;
+    const listOfContacts = await listContacts();
+    let updatedContact = null;
+    updatedContactsList = JSON.parse(listOfContacts).filter((contact) => {
+      if (contact.id === id) {
+        updatedContact = contact;
+        if (name) {
+          updatedContact.name = name;
+        }
+        if (email) {
+          updatedContact.email = email;
+        }
+        if (phone) {
+          updatedContact.phone = phone;
+        }
+        return updatedContact;
       }
-    );
-    updatedContact
-      ? res.status(200).send(updatedContact)
-      : res.status(404).send({ message: "Contact not found" });
+      return contact;
+    });
+    if (updatedContact && (name || email || phone)) {
+      fs.writeFile(
+        contactsPath,
+        JSON.stringify(updatedContactsList),
+        res.status(200).send(updatedContact),
+        (error) => {
+          if (error) {
+            console.log(error);
+          }
+        }
+      );
+    } else if (!updatedContact) {
+      res.status(400).send({ message: "id is not exist" });
+    } else {
+      res.status(400).send({ message: "missing fields" });
+    }
   } catch (error) {
     console.log(error);
   }
@@ -139,7 +182,4 @@ module.exports = {
   removeContact,
   addContact,
   updateContact,
-  validateId,
-  validateUpdateContact,
-  validateAddContact,
 };
