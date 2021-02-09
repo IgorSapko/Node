@@ -36,6 +36,7 @@ async function registerUser(req, res) {
       { $set: { avatarURL: avatarURL } },
       { new: true }
     );
+
     res.status(201).send({
       user: { email: newUser.email, subscription: newUser.subscription },
     });
@@ -134,6 +135,7 @@ async function login(req, res) {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   console.log("user", user);
+
   if (!user) {
     return res.status(401).send("Email or password is wrong");
   }
@@ -309,4 +311,5 @@ module.exports = {
   validateId,
   getCurrentUserData,
   updateAvatar,
+
 };

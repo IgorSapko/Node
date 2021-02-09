@@ -2,9 +2,7 @@ const { getMaxListeners, connected, exit } = require("process");
 const Contact = require("../models/contacts");
 const Joi = require("joi");
 
-const {
-  Types: { ObjectId },
-} = require("mongoose");
+const contactsPath = path.join(__dirname, "../models/contacts.json");
 
 async function listContacts(req, res) {
   try {
@@ -25,9 +23,9 @@ async function listContacts(req, res) {
     }
     listOfContacts = await Contact.find();
     res.status(200).send(listOfContacts);
+
   } catch (error) {
     console.log(error);
-    res.status(500).send(error);
   }
 }
 
@@ -43,6 +41,7 @@ async function getContactById(req, res) {
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
+
   }
 }
 
