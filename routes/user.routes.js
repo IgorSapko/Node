@@ -1,17 +1,54 @@
 const { Router } = require("express");
-const { boolean } = require("yargs");
-const router = Router();
+const userRouter = Router();
+const userRouterAuth = Router();
 
-const importFunctions = require("../controllers/contacts");
+const importFunctions = require("../controllers/users");
 
-router.get("/", importFunctions.listContacts);
+userRouterAuth.post(
+  "/register",
+  importFunctions.validateDataOfUser,
+  importFunctions.registerUser
+);
+userRouterAuth.post(
+  "/login",
+  importFunctions.validateDataOfUser,
+  importFunctions.login
+);
 
-router.get(`/:contactId`, importFunctions.getContactById);
+userRouterAuth.post(
+  "/logout",
+  importFunctions.tokenChecking,
+  importFunctions.logOut
+);
 
-router.post("/", importFunctions.addContact);
+userRouter.get("/", importFunctions.tokenChecking, importFunctions.listUsers);
 
-router.delete(`/:contactId`, importFunctions.removeContact);
+userRouter.get(
+  `/:userId`,
+  importFunctions.tokenChecking,
+  importFunctions.validateId,
+  importFunctions.getUserById
+);
 
-router.patch(`/:contactId`, importFunctions.updateContact);
+userRouter.delete(
+  `/:userId`,
+  importFunctions.tokenChecking,
+  importFunctions.validateId,
+  importFunctions.removeUser
+);
 
-module.exports = router;
+userRouter.patch(
+  `/:userId`,
+  importFunctions.tokenChecking,
+  importFunctions.validateId,
+  importFunctions.validateUpdateUser,
+  importFunctions.updateUser
+);
+
+userRouter.get(
+  `/current`,
+  importFunctions.tokenChecking,
+  importFunctions.getCurrentUserData
+);
+
+module.exports = { userRouterAuth, userRouter};

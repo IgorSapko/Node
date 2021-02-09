@@ -134,6 +134,48 @@ async function updateContact(req, res) {
   }
 }
 
+function validateId(req, res, next) {
+  const {
+    params: { contactId },
+  } = req;
+
+  if (!ObjectId.isValid(contactId)) {
+    return res.status(400).send("Contact id is not valid");
+  }
+
+  next();
+}
+
+function validateUpdateContact(req, res, next) {
+  const validationRules = Joi.object({
+    name: Joi.string(),
+    email: Joi.string(),
+    password: Joi.string(),
+    phone: Joi.string(),
+  });
+  const validationResult = validationRules.validate(req.body);
+  if (validationResult.error) {
+    return res.status(400).send(validationResult.error);
+  }
+  next();
+}
+
+function validateAddContact(req, res, next) {
+  const validationRules = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().required(),
+    password: Joi.string().required(),
+    phone: Joi.string().required(),
+  });
+
+  const validationResult = validationRules.validate(req.body);
+  if (validationResult.error) {
+    res.status(400).send(validationResult.error);
+  }
+
+  next();
+}
+
 module.exports = {
   listContacts,
   getContactById,
