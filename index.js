@@ -12,30 +12,49 @@ const MONGO_PASS = process.env.MONGO_PASS;
 const PORT = process.env.PORT;
 const MONGO_URL = `mongodb+srv://Admin:${MONGO_PASS}@cluster0.elolo.mongodb.net/db-contacts`;
 
-const { startSession } = require("./models/contacts");
-const app = express();
-app.use(cors({ orogin: `localhost:${PORT}` }));
-app.use(morgan("combined"));
-app.use(express.json());
-app.use("/api/contacts", contactRouter);
-app.use("/auth", userRouterAuth);
-app.use("/users", userRouter);
-app.use(express.static("public"));
+start();
 
-(async function startConnectionToDBAndListeningOfSrver() {
+async function start() {
+  const app = initServer();
+  initMiddlewares(app);
+  declareRoutes(app);
+  await connectToDb();
+  listen(app);
+}
+
+function initServer() {
+  return express();
+}
+
+function initMiddlewares(app) {
+  app.use(cors({ orogin: `localhost:${PORT}` }));
+  app.use(morgan("combined"));
+  app.use(express.json());
+  app.use(express.static("public"));
+}
+
+function declareRoutes(app) {
+  app.use("/api/contacts", contactRouter);
+  app.use("/auth", userRouterAuth);
+  app.use("/users", userRouter);
+}
+
+async function connectToDb() {
   try {
     await mongoose.connect(MONGO_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
     console.log("Database connection successful");
-    app.listen(PORT, () => {
-      console.log("Server is listening on port: ", PORT);
-    });
   } catch (error) {
     console.log(error);
     process.exit(1);
   }
-})();
+}
 
+function listen(app) {
+  app.listen(PORT, () => {
+    console.log("Server is listening on port: ", PORT);
+  });
+}
 

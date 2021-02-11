@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const fs = require("fs");
 const AvatarGenerator = require("avatar-generator");
+const { uuid } = require("uuidv4");
+const sgMail = require("@sendgrid/mail");
 // const multiavatar = require("@multiavatar/multiavatar");
 const imagemin = require("imagemin");
 const imageminJpegtran = require("imagemin-jpegtran");
@@ -16,18 +18,18 @@ const {
 
 require("dotenv").config();
 const PORT = process.env.PORT;
+sgMail.setApiKey(process.env.SEND_GRID_API_KEY);
 
 async function registerUser(req, res) {
   try {
     const { email, password } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    // let svgCode = multiavatar(`${email}`);
-    // let avatarURL = `https://api.multiavatar.com/${email}`;
-    // newUser = await User.create({ ...req.body, password: hash, avatarURL });
+    const verificationToken = uuid();
     const newUser = await User.create({
       ...req.body,
       password: hash,
       avatarURL: "",
+      verificationToken,
     });
     avatarCreate(email);
     let avatarURL = `http://localhost:${PORT}/images/${email}.png`;
@@ -37,6 +39,22 @@ async function registerUser(req, res) {
       { new: true }
     );
 
+    const msg = {
+      to: `${email}`, // Change to your recipient
+      from: process.env.verifiedSendersEmail, // Change to your verified sender
+      subject: "Please confirm Your email",
+      text: "and easy to do anywhere, even with Node.js",
+      html: `<strong>To verify Your email please go by link :</strong> <a href='http://localhost:${PORT}/auth/verify/${verificationToken}'> Click Me!</a> `,
+    };
+    sgMail
+      .send(msg)
+      .then(() => {
+        console.log("Email sent");
+      })
+      .catch((error) => {
+        console.log("123");
+        console.error(error);
+      });
     res.status(201).send({
       user: { email: newUser.email, subscription: newUser.subscription },
     });
@@ -55,7 +73,7 @@ async function avatarCreate(email) {
     imageExtension: ".png", // sprite file extension
   });
   email.length % 2 === 0 ? (variant = "male") : (variant = "female");
-  // const variant = "male"; // By default 'male' and 'female' supported
+
   const image = await avatar.generate(email, variant);
   // Now `image` contains sharp image pipeline http://sharp.pixelplumbing.com/en/stable/api-output/
   // you can write it to file
@@ -77,45 +95,58 @@ async function avatarCreate(email) {
 
 async function updateAvatar(req, res) {
   try {
-      const { destination, filename } = req.file;
-  const { _id, email } = req.user;
-  console.log("req.file", req.file);
-  const avatarAddressInTmpFolder = destination + "/" + filename;
-  const files = await imagemin([avatarAddressInTmpFolder], {
-    destination: "public/images/",
-    plugins: [
-      imageminJpegtran(),
-      imageminPngquant({
-        quality: [0.6, 0.8],
-      }),
-    ],
-  });
+    const { destination, filename } = req.file;
+    const { _id, email } = req.user;
+    console.log("req.file", req.file);
+    const avatarAddressInTmpFolder = destination + "/" + filename;
+    const files = await imagemin([avatarAddressInTmpFolder], {
+      destination: "public/images/",
+      plugins: [
+        imageminJpegtran(),
+        imageminPngquant({
+          quality: [0.6, 0.8],
+        }),
+      ],
+    });
 
-  fs.promises.unlink(avatarAddressInTmpFolder, (err) => {
-    if (err) {
-      throw err;
-    }
-  });
-  userCurrentAvatarAddress = `${path.join(
-    __dirname,
-    `../public/images/${email}.png`
-  )}`;
-  userNewAvatarAddress = `${path.join(
-    __dirname,
-    `../public/images/${req.file.filename}`
-  )}`;
+    fs.promises.unlink(avatarAddressInTmpFolder, (err) => {
+      if (err) {
+        throw err;
+      }
+    });
+    userCurrentAvatarAddress = `${path.join(
+      __dirname,
+      `../public/images/${email}.png`
+    )}`;
+    userNewAvatarAddress = `${path.join(
+      __dirname,
+      `../public/images/${req.file.filename}`
+    )}`;
 
-  fs.rename(userNewAvatarAddress, userCurrentAvatarAddress, (err) => {
-    if (err) throw err;
-  });
+    fs.rename(userNewAvatarAddress, userCurrentAvatarAddress, (err) => {
+      if (err) throw err;
+    });
 
-  const avatarURL = `http://localhost:${PORT}/images/${email}.png`;
+    const avatarURL = `http://localhost:${PORT}/images/${email}.png`;
 
-  res.status(200).send(`"avatarURL":${avatarURL}`)
-} catch (error) {
+    res.status(200).send(`"avatarURL":${avatarURL}`);
+  } catch (error) {
     res.status(401).send("Not authorized");
+  }
 }
- }
+
+async function isExistVerificationToken(req, res) {
+  try {
+    const { verificationToken } = req.params;
+    const user = await User.findOne({ verificationToken });
+    user
+      ? ((user.verificationToken = ""), user.save(), res.status(200).send(null))
+      : res.status(404).send("User not found");
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+}
 
 function validateDataOfUser(req, res, next) {
   const validationRules = Joi.object({
@@ -311,5 +342,5 @@ module.exports = {
   validateId,
   getCurrentUserData,
   updateAvatar,
-
+  isExistVerificationToken,
 };

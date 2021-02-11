@@ -38,6 +38,13 @@ userRouterAuth.post(
   importFunctions.logOut
 );
 
+userRouterAuth.get(
+  "/verify/:verificationToken",
+  importFunctions.isExistVerificationToken
+  // importFunctions.validateDataOfUser,
+  // importFunctions.registerUser
+);
+
 userRouter.get("/", importFunctions.tokenChecking, importFunctions.listUsers);
 
 userRouter.get(
