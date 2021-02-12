@@ -2,6 +2,9 @@ const { getMaxListeners, connected, exit } = require("process");
 const Contact = require("../models/contacts");
 const Joi = require("joi");
 const path = require("path");
+const {
+  Types: { ObjectId },
+} = require("mongoose");
 
 const contactsPath = path.join(__dirname, "../models/contacts.json");
 
@@ -10,25 +13,23 @@ async function listContacts(req, res) {
     let page = req.query.page;
     let limit = req.query.limit;
     let sub = req.query.sub;
-
     if (page && limit) {
       let listOfContacts = await Contact.paginate({}, { page, limit });
       res.status(200).send(listOfContacts.docs);
       return;
-    }
+    };
     if (sub) {
       console.log('sub')
       let listOfContacts = await Contact.find({ subscription: sub });
      await res.status(200).send(listOfContacts);
       return;
-    }
+    };
     listOfContacts = await Contact.find();
     res.status(200).send(listOfContacts);
-
   } catch (error) {
     console.log(error);
   }
-}
+};
 
 async function getContactById(req, res) {
   try {
@@ -42,9 +43,8 @@ async function getContactById(req, res) {
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
-
-  }
-}
+  };
+};
 
 async function removeContact(req, res) {
   try {
@@ -58,8 +58,8 @@ async function removeContact(req, res) {
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
-  }
-}
+  };
+};
 
 async function addContact(req, res) {
   try {
@@ -68,8 +68,8 @@ async function addContact(req, res) {
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
-  }
-}
+  };
+};
 
 async function updateContact(req, res) {
   try {
@@ -88,20 +88,18 @@ async function updateContact(req, res) {
       : res.status(404).send({ message: "Contact not found" });
   } catch (error) {
     console.log(error);
-  }
-}
+  };
+};
 
 function validateId(req, res, next) {
   const {
     params: { contactId },
   } = req;
-
   if (!ObjectId.isValid(contactId)) {
     return res.status(400).send("Contact id is not valid");
   }
-
   next();
-}
+};
 
 function validateUpdateContact(req, res, next) {
   const validationRules = Joi.object({
@@ -109,13 +107,13 @@ function validateUpdateContact(req, res, next) {
     email: Joi.string(),
     password: Joi.string(),
     phone: Joi.string(),
-  });
+  }).min(1);
   const validationResult = validationRules.validate(req.body);
   if (validationResult.error) {
     return res.status(400).send(validationResult.error);
-  }
+  };
   next();
-}
+};
 
 function validateAddContact(req, res, next) {
   const validationRules = Joi.object({
@@ -124,14 +122,12 @@ function validateAddContact(req, res, next) {
     password: Joi.string().required(),
     phone: Joi.string().required(),
   });
-
   const validationResult = validationRules.validate(req.body);
   if (validationResult.error) {
     res.status(400).send(validationResult.error);
-  }
-
+  };
   next();
-}
+};
 
 module.exports = {
   listContacts,

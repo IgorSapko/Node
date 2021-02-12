@@ -7,7 +7,6 @@ const fs = require("fs");
 const AvatarGenerator = require("avatar-generator");
 const { uuid } = require("uuidv4");
 const sgMail = require("@sendgrid/mail");
-// const multiavatar = require("@multiavatar/multiavatar");
 const imagemin = require("imagemin");
 const imageminJpegtran = require("imagemin-jpegtran");
 const imageminPngquant = require("imagemin-pngquant");
@@ -15,7 +14,6 @@ const imageminPngquant = require("imagemin-pngquant");
 const {
   Types: { ObjectId },
 } = require("mongoose");
-
 require("dotenv").config();
 const PORT = process.env.PORT;
 sgMail.setApiKey(process.env.SEND_GRID_API_KEY);
@@ -38,10 +36,9 @@ async function registerUser(req, res) {
       { $set: { avatarURL: avatarURL } },
       { new: true }
     );
-
     const msg = {
-      to: `${email}`, // Change to your recipient
-      from: process.env.verifiedSendersEmail, // Change to your verified sender
+      to: `${email}`,
+      from: process.env.verifiedSendersEmail,
       subject: "Please confirm Your email",
       text: "and easy to do anywhere, even with Node.js",
       html: `<strong>To verify Your email please go by link :</strong> <a href='http://localhost:${PORT}/auth/verify/${verificationToken}'> Click Me!</a> `,
@@ -52,7 +49,6 @@ async function registerUser(req, res) {
         console.log("Email sent");
       })
       .catch((error) => {
-        console.log("123");
         console.error(error);
       });
     res.status(201).send({
@@ -70,13 +66,10 @@ async function registerUser(req, res) {
 
 async function avatarCreate(email) {
   const avatar = new AvatarGenerator({
-    imageExtension: ".png", // sprite file extension
+    imageExtension: ".png",
   });
   email.length % 2 === 0 ? (variant = "male") : (variant = "female");
-
   const image = await avatar.generate(email, variant);
-  // Now `image` contains sharp image pipeline http://sharp.pixelplumbing.com/en/stable/api-output/
-  // you can write it to file
   const avatarAddressInTmpFolder = `${path.join(
     __dirname,
     `../tmp/${email}.png`
@@ -97,7 +90,6 @@ async function updateAvatar(req, res) {
   try {
     const { destination, filename } = req.file;
     const { _id, email } = req.user;
-    console.log("req.file", req.file);
     const avatarAddressInTmpFolder = destination + "/" + filename;
     const files = await imagemin([avatarAddressInTmpFolder], {
       destination: "public/images/",
@@ -108,7 +100,6 @@ async function updateAvatar(req, res) {
         }),
       ],
     });
-
     fs.promises.unlink(avatarAddressInTmpFolder, (err) => {
       if (err) {
         throw err;
@@ -122,18 +113,15 @@ async function updateAvatar(req, res) {
       __dirname,
       `../public/images/${req.file.filename}`
     )}`;
-
     fs.rename(userNewAvatarAddress, userCurrentAvatarAddress, (err) => {
       if (err) throw err;
     });
-
     const avatarURL = `http://localhost:${PORT}/images/${email}.png`;
-
     res.status(200).send(`"avatarURL":${avatarURL}`);
   } catch (error) {
     res.status(401).send("Not authorized");
-  }
-}
+  };
+};
 
 async function isExistVerificationToken(req, res) {
   try {
@@ -145,8 +133,8 @@ async function isExistVerificationToken(req, res) {
   } catch (error) {
     console.log(error);
     res.status(500).send(error);
-  }
-}
+  };
+};
 
 function validateDataOfUser(req, res, next) {
   const validationRules = Joi.object({
@@ -157,24 +145,20 @@ function validateDataOfUser(req, res, next) {
   const validationResult = validationRules.validate(req.body);
   if (validationResult.error) {
     res.status(400).send(validationResult.error.details[0].message);
-  }
-
+  };
   next();
-}
+};
 
 async function login(req, res) {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
-  console.log("user", user);
-
   if (!user) {
     return res.status(401).send("Email or password is wrong");
-  }
+  };
   const result = await bcrypt.compare(password, user.password);
-
   if (!result) {
     return res.status(401).send("Email or password is wrong");
-  }
+  };
   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
   const userWithToken = await User.findByIdAndUpdate(
     user._id,
@@ -185,11 +169,10 @@ async function login(req, res) {
     token: token,
     user: { email, subscription: user.subscription },
   });
-}
+};
 
 async function logOut(req, res) {
   const userId = req.user._id;
-
   const userwithoutToken = await User.findByIdAndUpdate(
     userId,
     { token: "" },
@@ -201,13 +184,13 @@ async function logOut(req, res) {
     ""
   );
   res.status(204).send("null");
-}
+};
 
 async function tokenChecking(req, res, next) {
   const authorizationHeader = req.get("Authorization");
   if (!authorizationHeader) {
     return res.status(401).send("Not authorized");
-  }
+  };
   const token = authorizationHeader.replace("Bearer ", "");
   try {
     const { userId } = await jwt.verify(token, process.env.JWT_SECRET);
@@ -217,8 +200,8 @@ async function tokenChecking(req, res, next) {
     next();
   } catch (error) {
     return res.status(401).send("Not authorized");
-  }
-}
+  };
+};
 
 async function listUsers(req, res) {
   try {
@@ -227,8 +210,8 @@ async function listUsers(req, res) {
   } catch (error) {
     console.log(error);
     res.status(500).send(error);
-  }
-}
+  };
+};
 
 async function getUserById(req, res) {
   try {
@@ -242,8 +225,8 @@ async function getUserById(req, res) {
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
-  }
-}
+  };
+};
 
 async function removeUser(req, res) {
   try {
@@ -252,72 +235,57 @@ async function removeUser(req, res) {
     } = req;
     deletedUser = await User.findByIdAndDelete(userId);
     deletedUser
-      ? res.status(200).send({ message: "User deleted" })
+      ? res.status(200).send({ message: "User is deleted" })
       : res.status(404).send({ message: "User not found" });
   } catch (error) {
     console.log(error.message);
     res.status(500).send(error.message);
-  }
-}
+  };
+};
 
 async function updateUser(req, res) {
   try {
     const {
       params: { userId },
     } = req;
-    const subscription = req.body.subscription;
-    if (
-      subscription === "pro" ||
-      subscription === "premium" ||
-      subscription === "free" ||
-      subscription === undefined
-    ) {
-      updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: req.body },
-        {
-          new: true,
-        }
-      );
-    } else {
-      res.status(400).send({
-        message:
-          "Field subscrcription should be one of following : 'free', 'pro', 'premium'",
-      });
-    }
+    updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: req.body },
+      {
+        new: true,
+      }
+    );
     updatedUser
       ? res.status(200).send(updatedUser)
       : res.status(404).send({ message: "User not found" });
   } catch (error) {
     res.status(500).send(error);
     console.log(error);
-  }
-}
+  };
+};
 
 function validateUpdateUser(req, res, next) {
   const validationRules = Joi.object({
     email: Joi.string(),
     password: Joi.string(),
-    subscription: Joi.string(),
+    subscription: Joi.string().valid("pro", "premium", "free"),
   });
   const validationResult = validationRules.validate(req.body);
   if (validationResult.error) {
     return res.status(400).send(validationResult.error);
-  }
+  };
   next();
-}
+};
 
 function validateId(req, res, next) {
   const {
     params: { userId },
   } = req;
-
   if (!ObjectId.isValid(userId)) {
     return res.status(400).send("User id is not valid");
-  }
-
+  };
   next();
-}
+};
 
 function getCurrentUserData(req, res) {
   try {
@@ -325,8 +293,8 @@ function getCurrentUserData(req, res) {
     res.status(200).send({ email, subscription });
   } catch (error) {
     res.status(500).send(error);
-  }
-}
+  };
+};
 
 module.exports = {
   validateDataOfUser,
